@@ -15,7 +15,7 @@ export function servePublicFiles () {
   return ({ params, query }: Request, res: Response, next: NextFunction) => {
     const file = params.file
 
-    if (!file.includes('/')) {
+    if (file && !file.includes('/') && !file.includes('\\')) {
       verify(file, res, next)
     } else {
       res.status(403)
@@ -24,9 +24,8 @@ export function servePublicFiles () {
   }
 
   function verify (file: string, res: Response, next: NextFunction) {
-    if (file && (endsWithAllowlistedFileType(file) || (file === 'incident-support.kdbx'))) {
-      file = security.cutOffPoisonNullByte(file)
-
+    file = security.cutOffPoisonNullByte(file)
+    if (file && (endsWithAllowlistedFileType(file) || isAllowlistedChallengeFile(file))) {
       challengeUtils.solveIf(challenges.directoryListingChallenge, () => { return file.toLowerCase() === 'acquisitions.md' })
       verifySuccessfulPoisonNullByteExploit(file)
 
@@ -47,6 +46,10 @@ export function servePublicFiles () {
       return challenges.easterEggLevelOneChallenge.solved || challenges.forgottenDevBackupChallenge.solved || challenges.forgottenBackupChallenge.solved ||
         challenges.misplacedSignatureFileChallenge.solved || file.toLowerCase() === 'encrypt.pyc'
     })
+  }
+
+  function isAllowlistedChallengeFile (file: string): boolean {
+    return ['incident-support.kdbx', 'eastere.gg', 'package.json.bak', 'coupons_2013.md.bak', 'suspicious_errors.yml', 'encrypt.pyc'].includes(file.toLowerCase())
   }
 
   function endsWithAllowlistedFileType (param: string) {
