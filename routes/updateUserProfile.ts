@@ -35,6 +35,14 @@ export function updateUserProfile () {
           req.body.username !== user.username
       })
 
+      const origin = req.get('origin')
+      const referer = req.get('referer')
+      const host = req.get('host')
+      if (typeof host !== 'string' || (!origin && !referer) || (origin && !origin.includes(host)) || (!origin && referer && !referer.includes(host))) {
+        next(new Error('Blocked possible CSRF attack'))
+        return
+      }
+
       const savedUser = await user.update({ username: req.body.username })
       const userWithStatus = utils.queryResultToJson(savedUser)
       const updatedToken = security.authorize(userWithStatus)
