@@ -21,6 +21,22 @@ export function updateUserProfile () {
       return
     }
 
+    const origin = req.get('origin')
+    const referer = req.get('referer')
+    const expectedOrigin = req.protocol + '://' + req.get('host')
+    if (!origin && !referer) {
+      next(new Error('Blocked illegal activity by ' + req.socket.remoteAddress))
+      return
+    }
+    if (origin && origin !== expectedOrigin) {
+      next(new Error('Blocked illegal activity by ' + req.socket.remoteAddress))
+      return
+    }
+    if (!origin && referer && !referer.startsWith(expectedOrigin + '/') && referer !== expectedOrigin) {
+      next(new Error('Blocked illegal activity by ' + req.socket.remoteAddress))
+      return
+    }
+
     try {
       const user = await UserModel.findByPk(loggedInUser.data.id)
       if (!user) {
