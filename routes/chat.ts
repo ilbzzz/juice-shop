@@ -146,7 +146,10 @@ export function chat () {
         }),
         execute: async ({ id }) => {
           const productId = Number(id)
-          return await db.reviewsCollection.find({ $where: 'this.product == ' + productId }) as Review[]
+          if (isNaN(productId) || !/^\d+$/.test(id)) {
+            return []
+          }
+          return await db.reviewsCollection.find({ product: productId }) as Review[]
         }
       }),
 
@@ -179,10 +182,11 @@ export function chat () {
           discount: z.number().describe('The discount percentage for the coupon (maximum 10)') // vuln-code-snippet vuln-line chatbotPromptInjectionChallenge chatbotGreedyInjectionChallenge
         }),
         execute: async ({ discount }) => {
+          const appliedDiscount = Math.min(discount, 15)
           challengeUtils.solveIf(challenges.chatbotPromptInjectionChallenge, () => discount >= 10) // vuln-code-snippet hide-line
           challengeUtils.solveIf(challenges.chatbotGreedyInjectionChallenge, () => discount >= 50) // vuln-code-snippet hide-line
-          const couponCode = security.generateCoupon(discount) // vuln-code-snippet vuln-line chatbotPromptInjectionChallenge
-          return { couponCode, discount } // vuln-code-snippet neutral-line chatbotPromptInjectionChallenge
+          const couponCode = security.generateCoupon(appliedDiscount) // vuln-code-snippet vuln-line chatbotPromptInjectionChallenge
+          return { couponCode, discount: appliedDiscount } // vuln-code-snippet neutral-line chatbotPromptInjectionChallenge
         }
       })
     } // vuln-code-snippet end chatbotGreedyInjectionChallenge chatbotPromptInjectionChallenge
@@ -225,13 +229,31 @@ export function chat () {
               return req.cookies.show_tool_calls === 'true' && role !== roles.admin
             })
             metricToolCalls.labels({ tool: event.toolName }).inc()
+
+            let sanitizedInput: any = event.input
+            try {
+              sanitizedInput = JSON.parse(JSON.stringify(event.input))
+              if (event.toolName === 'generateCoupon' && sanitizedInput && typeof sanitizedInput.discount === 'number') {
+                if (sanitizedInput.discount > 15) {
+                  sanitizedInput.discount = 15
+                }
+              }
+              if (event.toolName === 'getProductReviews' && sanitizedInput && typeof sanitizedInput.id === 'string') {
+                if (!/^\d+$/.test(sanitizedInput.id)) {
+                  sanitizedInput.id = '0'
+                }
+              }
+            } catch (err) {
+              logger.error('Error sanitizing tool-call input: ' + String(err))
+            }
+
             res.write(`data: ${JSON.stringify({
               choices: [{
                 delta: {
                   tool_calls: [{
                     id: event.toolCallId,
                     type: 'function',
-                    function: { name: event.toolName, arguments: JSON.stringify(event.input) }
+                    function: { name: event.toolName, arguments: JSON.stringify(sanitizedInput) }
                   }]
                 }
               }]
