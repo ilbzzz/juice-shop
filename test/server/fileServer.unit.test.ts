@@ -82,7 +82,7 @@ void describe('fileServer', () => {
     assert.equal(challenges.directoryListingChallenge.solved, true)
   })
 
-  void it('should solve "easterEggLevelOneChallenge" when requesting eastere.gg with Poison Null Byte attack', () => {
+  void it('should solve "easterEggLevelOneChallenge" but not serve file', () => {
     challenges.easterEggLevelOneChallenge = { solved: false, save } as unknown as Challenge
     req.params.file = 'eastere.gg%00.md'
 

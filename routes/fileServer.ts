@@ -13,22 +13,20 @@ import * as challengeUtils from '../lib/challengeUtils'
 
 export function servePublicFiles () {
   return ({ params, query }: Request, res: Response, next: NextFunction) => {
-    const file = params.file
+    let file = params.file
 
-    if (!file.includes('/')) {
-      verify(file, res, next)
-    } else {
-      res.status(403)
-      next(new Error('File names cannot contain forward slashes!'))
-    }
-  }
-
-  function verify (file: string, res: Response, next: NextFunction) {
-    if (file && (endsWithAllowlistedFileType(file) || (file === 'incident-support.kdbx'))) {
+    if (file) {
       file = security.cutOffPoisonNullByte(file)
+    }
 
+    if (file && (file.includes('/') || file.includes('\\'))) {
+      res.status(403)
+      return next(new Error('File names cannot contain forward or backward slashes!'))
+    }
+
+    if (file && (endsWithAllowlistedFileType(file) || (file === 'incident-support.kdbx'))) {
       challengeUtils.solveIf(challenges.directoryListingChallenge, () => { return file.toLowerCase() === 'acquisitions.md' })
-      verifySuccessfulPoisonNullByteExploit(file)
+      verifySuccessfulPoisonNullByteExploit(params.file)
 
       res.sendFile(path.resolve('ftp/', file))
     } else {
@@ -38,6 +36,7 @@ export function servePublicFiles () {
   }
 
   function verifySuccessfulPoisonNullByteExploit (file: string) {
+    file = security.cutOffPoisonNullByte(file)
     challengeUtils.solveIf(challenges.easterEggLevelOneChallenge, () => { return file.toLowerCase() === 'eastere.gg' })
     challengeUtils.solveIf(challenges.forgottenDevBackupChallenge, () => { return file.toLowerCase() === 'package.json.bak' })
     challengeUtils.solveIf(challenges.forgottenBackupChallenge, () => { return file.toLowerCase() === 'coupons_2013.md.bak' })
