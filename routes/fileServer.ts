@@ -24,9 +24,9 @@ export function servePublicFiles () {
   }
 
   function verify (file: string, res: Response, next: NextFunction) {
-    if (file && (endsWithAllowlistedFileType(file) || (file === 'incident-support.kdbx'))) {
-      file = security.cutOffPoisonNullByte(file)
-
+    const truncatedFile = security.cutOffPoisonNullByte(file)
+    if (truncatedFile && (endsWithAllowlistedFileType(truncatedFile) || (truncatedFile === 'incident-support.kdbx'))) {
+      const file = truncatedFile
       challengeUtils.solveIf(challenges.directoryListingChallenge, () => { return file.toLowerCase() === 'acquisitions.md' })
       verifySuccessfulPoisonNullByteExploit(file)
 
