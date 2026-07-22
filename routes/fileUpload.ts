@@ -104,6 +104,9 @@ function handleYamlUpload ({ file }: Request, res: Response, next: NextFunction)
     if (((file?.buffer) != null) && utils.isChallengeEnabled(challenges.deprecatedInterfaceChallenge)) {
       const data = file.buffer.toString()
       try {
+        if (data.match(/&\w+/) || data.match(/\*\w+/)) {
+          throw new Error('Anchors and aliases are not allowed for security reasons')
+        }
         const sandbox = { yaml, data }
         vm.createContext(sandbox)
         const yamlString = vm.runInContext('JSON.stringify(yaml.load(data))', sandbox, { timeout: 2000 })
