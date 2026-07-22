@@ -24,9 +24,8 @@ export function servePublicFiles () {
   }
 
   function verify (file: string, res: Response, next: NextFunction) {
+    file = security.cutOffPoisonNullByte(file)
     if (file && (endsWithAllowlistedFileType(file) || (file === 'incident-support.kdbx'))) {
-      file = security.cutOffPoisonNullByte(file)
-
       challengeUtils.solveIf(challenges.directoryListingChallenge, () => { return file.toLowerCase() === 'acquisitions.md' })
       verifySuccessfulPoisonNullByteExploit(file)
 
@@ -50,6 +49,7 @@ export function servePublicFiles () {
   }
 
   function endsWithAllowlistedFileType (param: string) {
-    return utils.endsWith(param, '.md') || utils.endsWith(param, '.pdf')
+    const lowParam = param.toLowerCase()
+    return lowParam.endsWith('.md') || lowParam.endsWith('.pdf')
   }
 }
