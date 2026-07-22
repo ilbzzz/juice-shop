@@ -62,7 +62,7 @@ void describe('/profile', () => {
     assert.ok(res.text.includes('Error: Blocked illegal activity'))
   })
 
-  void it('GET user profile renders evaluated SSTI payload for username containing valid expression', async () => {
+  void it('GET user profile does not render evaluated SSTI payload for username containing valid expression', async () => {
     await request(app)
       .post('/profile')
       .set('Cookie', authHeader.Cookie)
@@ -76,10 +76,10 @@ void describe('/profile', () => {
 
     assert.equal(res.status, 200)
     assert.ok(res.headers['content-type']?.includes('text/html'))
-    assert.ok(res.text.includes('>49<'))
+    assert.ok(res.text.includes('>#{7*7}<'))
   })
 
-  void it('GET user profile falls back gracefully when SSTI payload throws', async () => {
+  void it('GET user profile renders username literally when it looks like an SSTI payload', async () => {
     await request(app)
       .post('/profile')
       .set('Cookie', authHeader.Cookie)
@@ -93,7 +93,7 @@ void describe('/profile', () => {
 
     assert.equal(res.status, 200)
     assert.ok(res.headers['content-type']?.includes('text/html'))
-    assert.ok(res.text.includes('not_a_defined_symbol'))
+    assert.ok(res.text.includes('>#{not_a_defined_symbol}<'))
   })
 
   void it('should be solved when origin header matches configured CSRF URL', async () => {
