@@ -35,6 +35,14 @@ export function updateUserProfile () {
           req.body.username !== user.username
       })
 
+      const host = req.get('host')
+      const origin = req.headers.origin
+      const referer = req.headers.referer
+      if (!origin && !referer || (origin && (!host || !origin.includes(host as string))) || (!origin && referer && (!host || !referer.includes(host as string)))) {
+        next(new Error('Blocked illegal activity by ' + req.socket.remoteAddress))
+        return
+      }
+
       const savedUser = await user.update({ username: req.body.username })
       const userWithStatus = utils.queryResultToJson(savedUser)
       const updatedToken = security.authorize(userWithStatus)
