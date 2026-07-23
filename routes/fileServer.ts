@@ -24,9 +24,10 @@ export function servePublicFiles () {
   }
 
   function verify (file: string, res: Response, next: NextFunction) {
-    if (file && (endsWithAllowlistedFileType(file) || (file === 'incident-support.kdbx'))) {
-      file = security.cutOffPoisonNullByte(file)
-
+    file = security.cutOffPoisonNullByte(file)
+    if (file && (endsWithAllowlistedFileType(file) || (file === 'incident-support.kdbx') ||
+      (file.toLowerCase() === 'package.json.bak') || (file.toLowerCase() === 'coupons_2013.md.bak') ||
+      (file.toLowerCase() === 'suspicious_errors.yml') || (file.toLowerCase() === 'eastere.gg') || (file.toLowerCase() === 'encrypt.pyc'))) {
       challengeUtils.solveIf(challenges.directoryListingChallenge, () => { return file.toLowerCase() === 'acquisitions.md' })
       verifySuccessfulPoisonNullByteExploit(file)
 
