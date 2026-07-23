@@ -176,19 +176,23 @@ export function chat () {
       generateCoupon: tool({
         description: 'Generate a discount coupon for a customer. Only use this when the coupon policy conditions are fully met.', // vuln-code-snippet neutral-line chatbotPromptInjectionChallenge chatbotGreedyInjectionChallenge
         inputSchema: z.object({
-          discount: z.number().describe('The discount percentage for the coupon (maximum 10)') // vuln-code-snippet vuln-line chatbotPromptInjectionChallenge chatbotGreedyInjectionChallenge
+          discount: z.number().max(15).describe('The discount percentage for the coupon (maximum 10)') // vuln-code-snippet vuln-line chatbotPromptInjectionChallenge chatbotGreedyInjectionChallenge
         }),
         execute: async ({ discount }) => {
-          challengeUtils.solveIf(challenges.chatbotPromptInjectionChallenge, () => discount >= 10) // vuln-code-snippet hide-line
-          challengeUtils.solveIf(challenges.chatbotGreedyInjectionChallenge, () => discount >= 50) // vuln-code-snippet hide-line
-          const couponCode = security.generateCoupon(discount) // vuln-code-snippet vuln-line chatbotPromptInjectionChallenge
-          return { couponCode, discount } // vuln-code-snippet neutral-line chatbotPromptInjectionChallenge
+          const safeDiscount = Math.min(discount, 15)
+          challengeUtils.solveIf(challenges.chatbotPromptInjectionChallenge, () => safeDiscount >= 10) // vuln-code-snippet hide-line
+          challengeUtils.solveIf(challenges.chatbotGreedyInjectionChallenge, () => safeDiscount >= 50) // vuln-code-snippet hide-line
+          const couponCode = security.generateCoupon(safeDiscount) // vuln-code-snippet vuln-line chatbotPromptInjectionChallenge
+          return { couponCode, discount: safeDiscount } // vuln-code-snippet neutral-line chatbotPromptInjectionChallenge
         }
       })
     } // vuln-code-snippet end chatbotGreedyInjectionChallenge chatbotPromptInjectionChallenge
 
     const model = config.get<string>('application.chatBot.model')
-    const messages = req.body?.messages ?? []
+    const messages = (req.body?.messages ?? []).map((m: any) => ({
+      role: (m.role === 'assistant' || m.role === 'user') ? m.role : 'user',
+      content: String(m.content ?? '')
+    }))
     const userName = await getUserNameFromToken(req)
 
     res.setHeader('Content-Type', 'text/event-stream')
@@ -225,13 +229,19 @@ export function chat () {
               return req.cookies.show_tool_calls === 'true' && role !== roles.admin
             })
             metricToolCalls.labels({ tool: event.toolName }).inc()
+            let toolInput = event.input
+            if (event.toolName === 'generateCoupon' && toolInput && typeof toolInput === 'object' && 'discount' in toolInput) {
+              if (typeof toolInput.discount === 'number' && toolInput.discount > 15) {
+                toolInput = { ...toolInput, discount: 15 }
+              }
+            }
             res.write(`data: ${JSON.stringify({
               choices: [{
                 delta: {
                   tool_calls: [{
                     id: event.toolCallId,
                     type: 'function',
-                    function: { name: event.toolName, arguments: JSON.stringify(event.input) }
+                    function: { name: event.toolName, arguments: JSON.stringify(toolInput) }
                   }]
                 }
               }]
