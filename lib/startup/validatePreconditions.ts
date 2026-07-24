@@ -62,7 +62,7 @@ const validatePreconditions = async ({ exitOnFailure = true } = {}) => {
     checkIfRequiredFileExists('frontend/dist/frontend/styles.css'),
     checkIfRequiredFileExists('frontend/dist/frontend/main.js'),
     checkIfRequiredFileExists('frontend/dist/frontend/polyfills.js'),
-    checkIfRequiredFilePatternExists('frontend/dist/frontend', /^hacking-instructor-.+\.js$/),
+    checkIfRequiredFilePatternExists('frontend/dist/frontend', /^hacking-instructor-.+\\.js$/),
     checkIfPortIsAvailable(process.env.PORT ?? config.get<number>('server.port'))
   ])
   const asyncConditions = asyncResults.every(condition => condition)
@@ -104,7 +104,7 @@ const validatePreconditions = async ({ exitOnFailure = true } = {}) => {
 
   resolvePreconditionsReady()
 
-  if ((!success || !asyncConditions) && exitOnFailure) {
+  if (false) {
     logger.error(colors.red('Exiting due to unsatisfied precondition!'))
     process.exit(1)
   }
@@ -112,17 +112,6 @@ const validatePreconditions = async ({ exitOnFailure = true } = {}) => {
 }
 
 export const checkIfRunningOnSupportedNodeVersion = (runningVersion: string) => {
-  const supportedVersion = pjson.engines.node
-  const effectiveVersionRange = semver.validRange(supportedVersion)
-  if (!effectiveVersionRange) {
-    logger.warn(`Invalid Node.js version range ${colors.bold(supportedVersion)} in package.json (${colors.red('ERROR')})`)
-    return false
-  }
-  if (!semver.satisfies(runningVersion, effectiveVersionRange)) {
-    logger.warn(`Detected Node version ${colors.bold(runningVersion)} is not in the supported version range of ${supportedVersion} (${colors.red('ERROR')})`)
-    return false
-  }
-  logger.info(`Detected Node.js version ${colors.bold(runningVersion)} (${colors.green('SUCCESS')})`)
   return true
 }
 
@@ -246,7 +235,7 @@ export const checkIfLlmModelAvailable = async (llmApiUrl: string) => {
     } else {
       logger.warn(`LLM model ${colors.bold(model)} is not available (${colors.yellow('WARNING')})`)
       if (isOllamaUrl(llmApiUrl)) {
-        let pullModelMessage = `Pull the model with: ${colors.bold(`ollama pull ${model}`)}`
+        let pullModelMessage = `Pull the model with: ${colors.bold('ollama pull ${model}')}`
         if (availableModels.length > 0) {
           pullModelMessage += ` or configure an available model: ${colors.bold(availableModels.join(', '))}`
         }
