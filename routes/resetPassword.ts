@@ -46,6 +46,7 @@ export function resetPassword () {
           res.json({ user: updatedUser })
         }
       } else {
+        await new Promise(resolve => setTimeout(resolve, 1000))
         res.status(401).send(res.__('Wrong answer to security question.'))
       }
     } catch (error) {
