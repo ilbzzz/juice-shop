@@ -28,18 +28,24 @@ export function updateUserProfile () {
         return
       }
 
+      const url = config.get<string>('challenges.overwriteUrlForCsrfChallenge')
+      const isChallengeOrigin = ((req.headers.origin?.includes('://' + url.replace(/^https?:\/\//, ''))) ??
+        (req.headers.referer?.includes('://' + url.replace(/^https?:\/\//, ''))))
       challengeUtils.solveIf(challenges.csrfChallenge, () => {
-        const url = config.get<string>('challenges.overwriteUrlForCsrfChallenge')
-        return ((req.headers.origin?.includes('://' + url.replace(/^https?:\/\//, ''))) ??
-          (req.headers.referer?.includes('://' + url.replace(/^https?:\/\//, '')))) &&
-          req.body.username !== user.username
+        return isChallengeOrigin && req.body.username !== user.username
       })
 
-      const savedUser = await user.update({ username: req.body.username })
-      const userWithStatus = utils.queryResultToJson(savedUser)
-      const updatedToken = security.authorize(userWithStatus)
-      security.authenticatedUsers.put(updatedToken, userWithStatus)
-      res.cookie('token', updatedToken)
+      const host = req.get('host')
+      const isSameOrigin = (req.headers.origin?.includes('://' + host!)) ??
+        (req.headers.referer?.includes('://' + host!)) ?? true
+      if (isSameOrigin || isChallengeOrigin) {
+        const savedUser = await user.update({ username: req.body.username })
+        const userWithStatus = utils.queryResultToJson(savedUser)
+        const updatedToken = security.authorize(userWithStatus)
+        security.authenticatedUsers.put(updatedToken, userWithStatus)
+        res.cookie('token', updatedToken)
+      }
+
       res.location(process.env.BASE_PATH + '/profile')
       res.redirect(process.env.BASE_PATH + '/profile')
     } catch (error) {
