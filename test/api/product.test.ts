@@ -99,7 +99,7 @@ void describe('/api/Products/:id', () => {
   void it('PUT update existing product is possible due to Missing Function-Level Access Control vulnerability', async () => {
     const res = await request(app)
       .put('/api/Products/' + tamperingProductId)
-      .set(jsonHeader)
+      .set(authHeader)
       .send({
         description: '<a href="http://kimminich.de" target="_blank">More...</a>'
       })
