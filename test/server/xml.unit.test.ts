@@ -14,14 +14,14 @@ void describe('xml', () => {
     assert.match(result, /<root>hello<\/root>/)
   })
 
-  void it('should expand internal entities', async () => {
+  void it('should NOT expand internal entities', async () => {
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE root [
   <!ENTITY hello "world">
 ]>
 <root>&hello;</root>`
     const result = await parseXmlString(xml)
-    assert.match(result, /<root>world<\/root>/)
+    assert.match(result, /<root>&hello;<\/root>/)
   })
 
   void it('should throw error on malformed XML', async () => {
@@ -31,7 +31,7 @@ void describe('xml', () => {
     })
   })
 
-  void it('should timeout on entity expansion bomb', async () => {
+  void it('should still catch entity expansion bomb', async () => {
     const xml = `<?xml version="1.0"?>
 <!DOCTYPE lolz [
  <!ENTITY lol "lol">
@@ -47,7 +47,7 @@ void describe('xml', () => {
  <!ENTITY lol9 "&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;">
 ]>
 <lolz>&lol9;</lolz>`
-    // This might trigger either the libxml2 amplification protection or the VM timeout
+    // libxml2-wasm seems to still throw for amplification even if NOENT is disabled
     await assert.rejects(async () => {
       await parseXmlString(xml, 100) // 100ms timeout
     }, /(Script execution timed out|Maximum entity amplification factor exceeded)/)
